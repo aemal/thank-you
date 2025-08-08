@@ -68,15 +68,33 @@ main#app {
   inset: 0;
 }
 
+.ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin: center center;
+  animation: spin var(--spin-dur, 90s) linear infinite;
+  will-change: transform;
+}
+
+.bubble-wrap {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+
 .bubble {
   position: absolute;
-  width: 56px;
-  height: 56px;
+  width: var(--sz, 56px); /* adaptive via inline CSS variable */
+  height: var(--sz, 56px);
   border-radius: 50%;
   background-size: cover;
   background-position: center;
   box-shadow: 0 6px 16px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,255,255,0.05);
   transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  animation: breathe var(--breathe-dur, 4.8s) ease-in-out infinite alternate;
 }
 .bubble:hover {
   transform: scale(1.12);
@@ -86,16 +104,16 @@ main#app {
 
 .badge {
   position: absolute;
-  right: -6px;
-  bottom: -6px;
+  right: calc(var(--sz, 56px) * -0.10);
+  bottom: calc(var(--sz, 56px) * -0.10);
   background: var(--badge-bg);
   border: 1px solid rgba(255,255,255,0.25);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   color: #fff;
-  font-size: 14px;
+  font-size: clamp(12px, calc(var(--sz, 56px) * 0.28), 22px);
   line-height: 1;
-  padding: 6px 8px;
+  padding: calc(var(--sz,56px) * 0.10) calc(var(--sz,56px) * 0.16);
   border-radius: 999px;
   box-shadow: 0 2px 10px rgba(0,0,0,0.35);
 }
@@ -112,5 +130,15 @@ main#app {
 @media (max-width: 640px) {
   .message { padding: 20px 16px 4px; }
   .bubble { width: 48px; height: 48px; }
+}
+
+@keyframes spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes breathe {
+  from { transform: scale(0.97); filter: brightness(0.98); }
+  to { transform: scale(1.03); filter: brightness(1.02); }
 }
 

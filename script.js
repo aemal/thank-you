@@ -1,7 +1,8 @@
 /*
-  Renders LinkedIn profile bubbles around a central portrait in a spiral.
-  - Loads data.json from project root
-  - Each bubble shows user's profile image and a small emoji badge for reaction
+  Renders LinkedIn profile bubbles around a central portrait on animated rings.
+  - Loads data.json
+  - Bubbles are arranged into concentric rotating rings with adaptive sizing so everyone fits
+  - Each bubble shows profile photo and an emoji badge for reaction
 */
 
 const DATA_URL = 'data.json';
@@ -12,7 +13,7 @@ const reactionToEmoji = {
   like: '👍',
   love: '❤️',
   celebrate: '🎉',
-  support: '🤝',
+  support: '❤️‍🩹',
   curious: '🤔',
   insightful: '💡'
 };
@@ -54,39 +55,105 @@ function createBubble(person) {
   return el;
 }
 
-// Position items on a spiral around center
-function positionBubbles(bubblesContainer, elements) {
-  const rect = bubblesContainer.getBoundingClientRect();
-  const centerX = rect.width / 2;
-  const centerY = rect.height / 2;
+// Compute ring layout to fit all people within container
+function layoutRings(containerRect, peopleCount) {
+  const maxRadius = Math.min(containerRect.width, containerRect.height) / 2 - 30; // padding
+  const minRadius = 110; // around center photo
 
-  // Spiral parameters
-  const angleStep = Math.PI / 10; // radians between bubbles
-  const radiusStep = 6; // px added per bubble
+  // Binary search the largest bubble size that fits
+  let low = 28;
+  let high = Math.max(56, Math.floor(Math.min(containerRect.width, containerRect.height) / 12));
+  let best = 40;
+  let bestLayout = null;
 
-  let angle = 0;
-  let radius = 90; // start radius around center image
+  const canFit = (size) => {
+    const ringGap = Math.max(size * 0.95, 46);
+    let placed = 0;
+    let ringIndex = 0;
+    const rings = [];
+    for (let r = minRadius; r <= maxRadius && placed < peopleCount; r += ringGap) {
+      const circumference = 2 * Math.PI * r;
+      const step = size * 1.2;
+      const capacity = Math.max(4, Math.floor(circumference / step));
+      const available = Math.min(capacity, peopleCount - placed);
+      rings.push({
+        radius: r,
+        count: available,
+        size: Math.max(26, Math.floor(size * (1 - ringIndex * 0.03))),
+        spin: (ringIndex % 2 === 0) ? 80 - ringIndex * 6 : -(80 - ringIndex * 6),
+      });
+      placed += available;
+      ringIndex += 1;
+    }
+    return { fits: placed >= peopleCount, rings };
+  };
 
-  elements.forEach((el, idx) => {
-    const x = centerX + radius * Math.cos(angle) - el.offsetWidth / 2;
-    const y = centerY + radius * Math.sin(angle) - el.offsetHeight / 2;
+  for (let i = 0; i < 18 && low <= high; i += 1) {
+    const mid = Math.floor((low + high) / 2);
+    const result = canFit(mid);
+    if (result.fits) {
+      best = mid;
+      bestLayout = result.rings;
+      low = mid + 2; // try bigger
+    } else {
+      high = mid - 2; // try smaller
+    }
+  }
 
-    el.style.left = `${x}px`;
-    el.style.top = `${y}px`;
+  if (!bestLayout) {
+    bestLayout = canFit(best).rings;
+  }
 
-    angle += angleStep;
-    radius += radiusStep * (0.9 + Math.random() * 0.4); // small variation for organic feel
-  });
+  return { rings: bestLayout, bubbleSize: best };
 }
 
-function onResizePositioning(bubblesContainer, elements) {
-  let raf = null;
-  const handler = () => {
-    if (raf) cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => positionBubbles(bubblesContainer, elements));
-  };
-  window.addEventListener('resize', handler);
-  return () => window.removeEventListener('resize', handler);
+function buildRings(bubblesContainer, people) {
+  bubblesContainer.innerHTML = '';
+  const rect = bubblesContainer.getBoundingClientRect();
+  const { rings } = layoutRings(rect, people.length);
+
+  // Center placeholder element to measure later
+  const center = document.querySelector('.center-photo');
+  if (center) {
+    // ensure it sits above inner rings slightly
+    center.style.zIndex = '2';
+  }
+
+  let index = 0;
+  const ringElements = [];
+
+  rings.forEach((ring, ringIdx) => {
+    const ringEl = document.createElement('div');
+    ringEl.className = 'ring';
+    ringEl.style.setProperty('--spin-dur', `${Math.max(24, Math.abs(ring.spin))}s`);
+    // Alternate direction by flipping duration sign via animation-direction handled by sign
+    if (ring.spin < 0) ringEl.style.animationDirection = 'reverse';
+
+    const angleStep = (2 * Math.PI) / ring.count;
+    const size = Math.max(34, Math.floor(ring.size));
+
+    for (let i = 0; i < ring.count && index < people.length; i += 1, index += 1) {
+      const person = people[index];
+      const wrap = document.createElement('div');
+      wrap.className = 'bubble-wrap';
+      const angle = i * angleStep;
+      const x = ring.radius * Math.cos(angle);
+      const y = ring.radius * Math.sin(angle);
+      wrap.style.transform = `translate(${x}px, ${y}px)`;
+
+      const el = createBubble(person);
+      el.style.setProperty('--sz', `${size}px`);
+      el.style.setProperty('--breathe-dur', `${3.6 + (i % 5) * 0.25}s`);
+      wrap.appendChild(el);
+
+      ringEl.appendChild(wrap);
+    }
+
+    bubblesContainer.appendChild(ringEl);
+    ringElements.push(ringEl);
+  });
+
+  return ringElements;
 }
 
 async function init() {
@@ -105,19 +172,16 @@ async function init() {
     return;
   }
 
-  const elements = [];
-  data.forEach(person => {
-    if (!person || !person.profileImage) return;
-    const el = createBubble(person);
-    bubbles.appendChild(el);
-    elements.push(el);
+  const people = data.filter(p => p && p.profileImage);
+  const render = () => buildRings(bubbles, people);
+  render();
+
+  // Rebuild on resize with debounce
+  let raf = null;
+  window.addEventListener('resize', () => {
+    if (raf) cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(render);
   });
-
-  // After DOM paint, measure and position
-  requestAnimationFrame(() => positionBubbles(bubbles, elements));
-
-  // Reposition on resize
-  onResizePositioning(bubbles, elements);
 }
 
 document.addEventListener('DOMContentLoaded', init);
