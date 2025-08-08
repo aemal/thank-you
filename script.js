@@ -111,7 +111,8 @@ function buildRings(bubblesContainer, people) {
   bubblesContainer.innerHTML = '';
   const rect = bubblesContainer.getBoundingClientRect();
   const centerEl = document.querySelector('.center-photo');
-  const centerRadius = centerEl ? centerEl.getBoundingClientRect().width / 2 : 90;
+  const centerRect = centerEl ? centerEl.getBoundingClientRect() : { width: 200 };
+  const centerRadius = centerRect.width / 2;
   const { rings } = layoutRings(rect, people.length, centerRadius);
 
   // Center placeholder element to measure later

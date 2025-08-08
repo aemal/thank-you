@@ -23,6 +23,15 @@ main#app {
   grid-template-rows: auto 1fr auto;
 }
 
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: min(1100px, 92%);
+  margin: 0 auto;
+  align-items: start;
+}
+
 .message {
   text-align: center;
   padding: 28px 20px 8px;
@@ -44,7 +53,7 @@ main#app {
 #universe {
   position: relative;
   width: 100%;
-  height: clamp(600px, 78dvh, 900px);
+  height: clamp(640px, 78dvh, 1000px);
   overflow: hidden;
 }
 
@@ -127,7 +136,15 @@ main#app {
 .credits a { color: var(--accent); text-decoration: none; }
 .credits a:hover { text-decoration: underline; }
 
+.post-link {
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.post-link a { color: var(--accent); }
+
 @media (max-width: 640px) {
+  .layout { grid-template-columns: 1fr; gap: 12px; }
   .message { padding: 20px 16px 4px; }
   .bubble { width: 48px; height: 48px; }
 }
