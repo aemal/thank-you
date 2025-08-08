@@ -183,6 +183,8 @@ async function init() {
   const universe = document.getElementById('universe');
   const bubbles = document.getElementById('bubbles');
   const profilePanel = document.getElementById('profile-panel');
+  const profileHover = document.getElementById('profile-hover');
+  const profileStream = document.getElementById('profile-stream');
   if (!universe || !bubbles) return;
 
   createCenterPhoto(universe);
@@ -208,12 +210,12 @@ async function init() {
   // Spotlight panel rendering
   const normalizeName = (name) => String(name || '').replace(/\n.*/, '').trim();
   const renderProfile = (person) => {
-    if (!profilePanel || !person) return;
+    if (!profileHover || !person) return;
     const name = normalizeName(person.name);
     const headline = person.headline || '';
     const reactionEmoji = pickEmoji(person.reaction);
     const profileUrl = person.profileLink || '#';
-    profilePanel.innerHTML = `
+    profileHover.innerHTML = `
       <div class="profile-card">
         <img src="${person.profileImage}" alt="${name}'s photo" />
         <div>
@@ -264,6 +266,51 @@ async function init() {
   // Initial spotlight and start rotation
   showSpotlightByIndex(spotlightIndex);
   startAuto();
+
+  // Build continuous auto-scrolling stream (bottom to top)
+  const buildStream = () => {
+    if (!profileStream) return;
+    profileStream.innerHTML = '';
+    const inner = document.createElement('div');
+    inner.className = 'stream-inner';
+    profileStream.appendChild(inner);
+
+    // Duplicate list for seamless loop
+    const list = [...uniquePeople, ...uniquePeople];
+    list.forEach((person) => {
+      const item = document.createElement('div');
+      item.className = 'stream-item';
+      const safeName = normalizeName(person.name);
+      item.innerHTML = `
+        <img src="${person.profileImage}" alt="${safeName}'s photo" />
+        <div>
+          <h4>${safeName}</h4>
+          <p>${person.headline || ''}</p>
+        </div>
+      `;
+      inner.appendChild(item);
+    });
+
+    let translateY = 0;
+    let lastTs = 0;
+    const speedPxPerSec = 15; // slow scroll
+
+    const singleListHeight = inner.scrollHeight / 2;
+
+    const step = (ts) => {
+      if (!lastTs) lastTs = ts;
+      const dt = (ts - lastTs) / 1000; // seconds
+      lastTs = ts;
+      translateY -= speedPxPerSec * dt;
+      if (-translateY >= singleListHeight) {
+        translateY = 0;
+      }
+      inner.style.transform = `translateY(${translateY}px)`;
+      requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  };
+  buildStream();
 
   // Rebuild on resize with debounce
   let raf = null;

@@ -164,8 +164,13 @@ main#app {
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 12px;
-  padding: 16px;
+  padding: 0;
   overflow: hidden;
+}
+
+.profile-hover {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .profile-card {
@@ -202,6 +207,29 @@ main#app {
   border-radius: 8px;
   font-weight: 600;
 }
+
+/* Auto-scrolling stream */
+.profile-stream {
+  position: relative;
+  height: calc(100% - 116px); /* rest of the panel below hover area (approx) */
+  overflow: hidden;
+}
+.stream-inner {
+  position: absolute;
+  inset: 0 0 auto 0;
+  display: grid;
+  gap: 10px;
+  padding: 12px 16px 16px;
+}
+.stream-item {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.stream-item img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; }
+.stream-item h4 { margin: 0; font-size: 14px; }
+.stream-item p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
 
 @keyframes spin {
   from { transform: translate(-50%, -50%) rotate(0deg); }
