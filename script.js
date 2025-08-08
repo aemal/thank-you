@@ -56,9 +56,8 @@ function createBubble(person) {
 }
 
 // Compute ring layout to fit all people within container
-function layoutRings(containerRect, peopleCount) {
+function layoutRings(containerRect, peopleCount, centerRadiusPx) {
   const maxRadius = Math.min(containerRect.width, containerRect.height) / 2 - 30; // padding
-  const minRadius = 110; // around center photo
 
   // Binary search the largest bubble size that fits
   let low = 28;
@@ -71,7 +70,8 @@ function layoutRings(containerRect, peopleCount) {
     let placed = 0;
     let ringIndex = 0;
     const rings = [];
-    for (let r = minRadius; r <= maxRadius && placed < peopleCount; r += ringGap) {
+    const safeInnerRadius = Math.max(centerRadiusPx + size * 0.65 + 20, 90);
+    for (let r = safeInnerRadius; r <= maxRadius && placed < peopleCount; r += ringGap) {
       const circumference = 2 * Math.PI * r;
       const step = size * 1.2;
       const capacity = Math.max(4, Math.floor(circumference / step));
@@ -110,14 +110,13 @@ function layoutRings(containerRect, peopleCount) {
 function buildRings(bubblesContainer, people) {
   bubblesContainer.innerHTML = '';
   const rect = bubblesContainer.getBoundingClientRect();
-  const { rings } = layoutRings(rect, people.length);
+  const centerEl = document.querySelector('.center-photo');
+  const centerRadius = centerEl ? centerEl.getBoundingClientRect().width / 2 : 90;
+  const { rings } = layoutRings(rect, people.length, centerRadius);
 
   // Center placeholder element to measure later
   const center = document.querySelector('.center-photo');
-  if (center) {
-    // ensure it sits above inner rings slightly
-    center.style.zIndex = '2';
-  }
+  if (center) center.style.zIndex = '2';
 
   let index = 0;
   const ringElements = [];
