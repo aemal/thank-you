@@ -173,7 +173,14 @@ async function init() {
   }
 
   const people = data.filter(p => p && p.profileImage);
-  const render = () => buildRings(bubbles, people);
+  // Ensure uniqueness by image URL to avoid duplicates if any
+  const seen = new Set();
+  const uniquePeople = people.filter(p => {
+    if (seen.has(p.profileImage)) return false;
+    seen.add(p.profileImage);
+    return true;
+  });
+  const render = () => buildRings(bubbles, uniquePeople);
   render();
 
   // Rebuild on resize with debounce
