@@ -25,9 +25,10 @@ main#app {
 
 .layout {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr 1fr; /* 3 columns: left 2 for universe, right 1 for profile */
+  grid-template-rows: auto 1fr;
   gap: 12px;
-  width: min(1100px, 92%);
+  width: min(1200px, 96%);
   margin: 0 auto;
   align-items: start;
 }
@@ -38,6 +39,7 @@ main#app {
   max-width: 1000px;
   margin: 0 auto;
 }
+.message { grid-column: 1 / -1; }
 .message h1 {
   margin: 0 0 8px;
   font-weight: 800;
@@ -55,6 +57,8 @@ main#app {
   width: 100%;
   height: clamp(640px, 78dvh, 1000px);
   overflow: hidden;
+  grid-column: 1 / span 2; /* span 2 columns */
+  grid-row: 2 / 3;
 }
 
 /* Center portrait */
@@ -104,6 +108,7 @@ main#app {
   box-shadow: 0 6px 16px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,255,255,0.05);
   transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
   animation: breathe var(--breathe-dur, 4.8s) ease-in-out infinite alternate;
+  cursor: pointer;
 }
 .bubble:hover {
   transform: scale(1.12);
@@ -144,9 +149,58 @@ main#app {
 .post-link a { color: var(--accent); }
 
 @media (max-width: 640px) {
-  .layout { grid-template-columns: 1fr; gap: 12px; }
+  .layout { grid-template-columns: 1fr; grid-template-rows: auto auto auto; gap: 12px; }
   .message { padding: 20px 16px 4px; }
   .bubble { width: 48px; height: 48px; }
+  #universe { grid-column: 1 / -1; grid-row: auto; height: clamp(520px, 65dvh, 820px); }
+  .profile-panel { grid-column: 1 / -1; grid-row: auto; }
+}
+
+/* Right-side profile panel */
+.profile-panel {
+  grid-column: 3 / 4;
+  grid-row: 2 / 3;
+  align-self: stretch;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 16px;
+  overflow: hidden;
+}
+
+.profile-card {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.profile-card img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,255,255,0.05);
+}
+.profile-name {
+  margin: 0;
+  font-weight: 700;
+}
+.profile-headline {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.profile-actions {
+  margin-top: 12px;
+}
+.profile-actions a {
+  display: inline-block;
+  color: #0b66c3;
+  background: rgba(11,102,195,0.12);
+  text-decoration: none;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-weight: 600;
 }
 
 @keyframes spin {

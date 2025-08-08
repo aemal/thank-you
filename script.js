@@ -37,20 +37,43 @@ function createCenterPhoto(container) {
   container.appendChild(center);
 }
 
-function createBubble(person) {
+function createBubble(person, onEnter, onLeave) {
   const el = document.createElement('div');
   el.className = 'bubble';
   el.style.backgroundImage = `url(${person.profileImage})`;
   el.title = `${person.name.replace(/\n.*/, '')} — ${person.reaction || ''}`.trim();
+  el.setAttribute('role', 'link');
+  el.setAttribute('aria-label', `${person.name.replace(/\n.*/, '')} — open LinkedIn profile`);
+  el.tabIndex = 0;
 
   const badge = document.createElement('div');
   badge.className = 'badge';
   badge.textContent = pickEmoji(person.reaction);
   el.appendChild(badge);
 
-  el.addEventListener('click', () => {
-    if (person.profileLink) window.open(person.profileLink, '_blank');
+  const openProfile = () => {
+    if (person.profileLink) {
+      const w = window.open(person.profileLink, '_blank', 'noopener');
+      if (w) w.opener = null;
+    }
+  };
+
+  el.addEventListener('click', openProfile);
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openProfile();
+    }
   });
+
+  if (typeof onEnter === 'function') {
+    el.addEventListener('mouseenter', () => onEnter(person));
+    el.addEventListener('focus', () => onEnter(person));
+  }
+  if (typeof onLeave === 'function') {
+    el.addEventListener('mouseleave', () => onLeave());
+    el.addEventListener('blur', () => onLeave());
+  }
 
   return el;
 }
@@ -107,7 +130,7 @@ function layoutRings(containerRect, peopleCount, centerRadiusPx) {
   return { rings: bestLayout, bubbleSize: best };
 }
 
-function buildRings(bubblesContainer, people) {
+function buildRings(bubblesContainer, people, onEnter, onLeave) {
   bubblesContainer.innerHTML = '';
   const rect = bubblesContainer.getBoundingClientRect();
   const centerEl = document.querySelector('.center-photo');
@@ -141,7 +164,7 @@ function buildRings(bubblesContainer, people) {
       const y = ring.radius * Math.sin(angle);
       wrap.style.transform = `translate(${x}px, ${y}px)`;
 
-      const el = createBubble(person);
+      const el = createBubble(person, onEnter, onLeave);
       el.style.setProperty('--sz', `${size}px`);
       el.style.setProperty('--breathe-dur', `${3.6 + (i % 5) * 0.25}s`);
       wrap.appendChild(el);
@@ -159,6 +182,7 @@ function buildRings(bubblesContainer, people) {
 async function init() {
   const universe = document.getElementById('universe');
   const bubbles = document.getElementById('bubbles');
+  const profilePanel = document.getElementById('profile-panel');
   if (!universe || !bubbles) return;
 
   createCenterPhoto(universe);
@@ -180,8 +204,66 @@ async function init() {
     seen.add(p.profileImage);
     return true;
   });
-  const render = () => buildRings(bubbles, uniquePeople);
+
+  // Spotlight panel rendering
+  const normalizeName = (name) => String(name || '').replace(/\n.*/, '').trim();
+  const renderProfile = (person) => {
+    if (!profilePanel || !person) return;
+    const name = normalizeName(person.name);
+    const headline = person.headline || '';
+    const reactionEmoji = pickEmoji(person.reaction);
+    const profileUrl = person.profileLink || '#';
+    profilePanel.innerHTML = `
+      <div class="profile-card">
+        <img src="${person.profileImage}" alt="${name}'s photo" />
+        <div>
+          <h3 class="profile-name">${name} <span aria-hidden="true">${reactionEmoji}</span></h3>
+          <p class="profile-headline">${headline}</p>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <a href="${profileUrl}" target="_blank" rel="noopener">View on LinkedIn</a>
+      </div>
+    `;
+  };
+
+  // Auto-rotation state
+  let spotlightIndex = 0;
+  let hoverLock = false;
+  let intervalId = null;
+
+  const showSpotlightByIndex = (idx) => {
+    const safeIdx = ((idx % uniquePeople.length) + uniquePeople.length) % uniquePeople.length;
+    renderProfile(uniquePeople[safeIdx]);
+  };
+
+  const startAuto = () => {
+    stopAuto();
+    intervalId = setInterval(() => {
+      if (hoverLock) return;
+      spotlightIndex = (spotlightIndex + 1) % uniquePeople.length;
+      showSpotlightByIndex(spotlightIndex);
+    }, 3000);
+  };
+  const stopAuto = () => {
+    if (intervalId) clearInterval(intervalId);
+    intervalId = null;
+  };
+
+  const handleEnter = (person) => {
+    hoverLock = true;
+    renderProfile(person);
+  };
+  const handleLeave = () => {
+    hoverLock = false;
+  };
+
+  const render = () => buildRings(bubbles, uniquePeople, handleEnter, handleLeave);
   render();
+
+  // Initial spotlight and start rotation
+  showSpotlightByIndex(spotlightIndex);
+  startAuto();
 
   // Rebuild on resize with debounce
   let raf = null;
